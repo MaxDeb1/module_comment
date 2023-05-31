@@ -11,8 +11,14 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use function Symfony\Component\String\u;
 
@@ -28,27 +34,44 @@ use function Symfony\Component\String\u;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'symfony_demo_comment')]
+#[ApiResource(
+    order: ['publishedAt' => 'DESC'],
+    paginationItemsPerPage: 2,
+    normalizationContext: ['groups' => ['read:comment']],
+    operations: [
+      new Get(
+        normalizationContext: ['groups' => ['read:comment', 'read:full:comment']]
+      ),
+      new GetCollection(),
+    ]
+)]
+#[ApiFilter(SearchFilter::class, properties: ['post' => 'exact'])]
 class Comment
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]
+    #[Groups("read:comment")]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Post::class, inversedBy: 'comments')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups("read:full:comment")]
     private ?Post $post = null;
 
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank(message: 'comment.blank')]
     #[Assert\Length(min: 5, minMessage: 'comment.too_short', max: 10000, maxMessage: 'comment.too_long')]
+    #[Groups("read:comment")]
     private ?string $content = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups("read:comment")]
     private \DateTime $publishedAt;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups("read:comment")]
     private ?User $author = null;
 
     public function __construct()
