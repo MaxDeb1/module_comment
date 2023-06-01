@@ -14,8 +14,12 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use App\Controller\Api\CommentCreateController;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -43,6 +47,18 @@ use function Symfony\Component\String\u;
         normalizationContext: ['groups' => ['read:comment', 'read:full:comment']]
       ),
       new GetCollection(),
+      new Post(
+        security: "is_granted('IS_AUTHENTIFICATED_FULLY')",
+        controller: CommentCreateController::class,
+        denormalizationContext: ['groups' => ['create:comment']]
+      ),
+      new Put(
+        security: "is_granted('EDIT_COMMENT', object)",
+        denormalizationContext: ['groups' => ['update:comment']]
+      ),
+      new Delete(
+        security: "is_granted('EDIT_COMMENT', object)",
+      ),
     ]
 )]
 #[ApiFilter(SearchFilter::class, properties: ['post' => 'exact'])]
@@ -56,13 +72,13 @@ class Comment
 
     #[ORM\ManyToOne(targetEntity: Post::class, inversedBy: 'comments')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups("read:full:comment")]
+    #[Groups("read:full:comment", "create:comment")]
     private ?Post $post = null;
 
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank(message: 'comment.blank')]
     #[Assert\Length(min: 5, minMessage: 'comment.too_short', max: 10000, maxMessage: 'comment.too_long')]
-    #[Groups("read:comment")]
+    #[Groups("read:comment", "create:comment", "update:comment")]
     private ?string $content = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
